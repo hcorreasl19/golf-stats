@@ -22,7 +22,7 @@ h2 { font-size: clamp(2rem, 3.5vw, 3.8rem) !important; line-height: 1.12 !import
 .hero h1 { margin: 1.4rem 0 1.7rem; }
 .hero-description { max-width: 410px; font-size: 1rem; line-height: 1.8; color: #526357; }
 .editorial-link { display: inline-flex; justify-content: space-between; gap: 4rem; color: var(--ink) !important; text-decoration: none; border-bottom: 1px solid #96a18a; padding: 1rem 0 .7rem; margin-top: 1rem; font-size: .85rem; }
-.course-art { background: #dce2c7; min-height: 440px; position: relative; overflow: hidden; border-radius: 48% 48% 0 0; }
+.course-art { background: #dce2c7; min-height: 440px; position: relative; overflow: hidden; border-radius: 48% 48% 16px 16px; }
 .contour { position: absolute; border: 1px solid #a7b68e; border-radius: 46% 54% 58% 42%; transform: rotate(-32deg); }
 .contour-one { width: 125%; height: 130%; top: 10%; left: -8%; }
 .contour-two { width: 95%; height: 110%; top: 20%; left: 8%; }
@@ -40,10 +40,10 @@ h2 { font-size: clamp(2rem, 3.5vw, 3.8rem) !important; line-height: 1.12 !import
 .feature-grid article > span { font-size: .6rem; letter-spacing: .13em; }
 .feature-grid h3 { font-size: 1.8rem; margin: 1.5rem 0 1rem; }
 .feature-grid p { color: #526357; line-height: 1.8; font-size: .92rem; max-width: 340px; }
-.stButton button, .stFormSubmitButton button { border-radius: 0; min-height: 2.8rem; font-size: .85rem; }
+.stButton button, .stFormSubmitButton button { border-radius: 10px; min-height: 2.8rem; font-size: .85rem; }
 [data-testid="stMetric"] { border-top: 1px solid #a5b29c; padding: 1rem 0; }
 [data-testid="stMetricValue"] { font-family: Georgia, serif; font-size: 2.8rem; }
-[data-testid="stForm"] { border: 1px solid var(--line); border-radius: 0; padding: 2rem; background: #fafaf5; }
+[data-testid="stForm"] { border: 1px solid var(--line); border-radius: 16px; padding: 2rem; background: #fafaf5; }
 .account-copy { padding: 3rem 3rem 3rem 0; }
 .account-copy p:last-child { line-height: 1.8; max-width: 380px; margin-top: 2rem; }
 footer { margin-top: 4rem; padding: 2rem 0 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 1rem; color: #526357; font-size: .7rem; letter-spacing: .04em; }
@@ -51,7 +51,7 @@ footer strong { color: var(--ink); }
 @media(max-width: 760px) {
  [data-testid="stMainBlockContainer"] { padding: 1.5rem 5vw; }
  .hero { grid-template-columns: 1fr; gap: 2rem; padding-top: .5rem; }
- .course-art { min-height: 320px; border-radius: 45% 45% 0 0; }
+ .course-art { min-height: 320px; border-radius: 45% 45% 16px 16px; }
  .intro, .feature-grid { grid-template-columns: 1fr; gap: 1.5rem; }
  .intro { margin-top: 3rem; }
  .intro .eyebrow { margin-bottom: 0; }
@@ -60,3 +60,16 @@ footer strong { color: var(--ink); }
  [data-testid="stRadio"] [role="radiogroup"] > div { flex-shrink: 0; }
  footer { flex-wrap: wrap; }
 }
+
+/* Rounded controls and panels retain the restrained editorial layout. */
+.stButton button, .stFormSubmitButton button { border-radius: 10px; }
+[data-testid="stForm"] { border-radius: 16px; }
+[data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input { border-radius: 8px; }
+[data-baseweb="input"], [data-baseweb="base-input"],
+[data-baseweb="select"] > div { border-radius: 10px; }
+[data-testid="stExpander"], [data-testid="stExpander"] details,
+[data-testid="stDataFrame"], [data-testid="stAlert"] { border-radius: 12px; overflow: hidden; }
+[data-testid="stMetric"] { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem; }
+.feature-grid article { border: 1px solid var(--line); border-radius: 16px; padding: 1.5rem; }
+[data-testid="stRadioOption"] { border-radius: 6px; }

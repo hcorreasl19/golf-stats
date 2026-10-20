@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Account confirmation</title></head>
+<body style="margin:0"><script>
+(() => {
+  const send = data => window.parent.postMessage({isStreamlitMessage: true, ...data}, '*');
+  let sent = false;
+  let cleared = false;
+  window.addEventListener('message', event => {
+    if (event.source !== window.parent || event.data?.type !== 'streamlit:render') return;
+    if (sent && event.data.args?.consumed && !cleared) {
+      cleared = true;
+      send({type: 'streamlit:setComponentValue', value: null, dataType: 'json'});
+    }
+    if (sent) return;
+    send({type: 'streamlit:setFrameHeight', height: 0});
+    try {
+      const source = new URLSearchParams(window.parent.location.hash.slice(1));
+      if (!source.has('access_token') || !source.has('refresh_token')) return;
+      sent = true;
+      const value = {access_token: source.get('access_token'), refresh_token: source.get('refresh_token'), type: source.get('type')};
+      // Remove recovery credentials from the address before delivering them to the app.
+      const location = window.parent.location;
+      window.parent.history.replaceState(null, '', location.pathname + location.search);
+      send({type: 'streamlit:setComponentValue', value, dataType: 'json'});
+    } catch (_) {
+      // Cross-origin hosts retain the masked-link fallback in Account help.
+    }
+  });
+  send({type: 'streamlit:componentReady', apiVersion: 1});
+  send({type: 'streamlit:setFrameHeight', height: 0});
+})();
+</script></body></html>
