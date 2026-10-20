@@ -1,12 +1,11 @@
 import streamlit as st
-from supabase import create_client
+from interface import client, styles, header, home, account, footer, navigate
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 
 st.set_page_config(
     page_title="Golf Stats",
-    page_icon="⛳",
     layout="wide"
 )
 
@@ -15,39 +14,37 @@ st.set_page_config(
 # DATA
 # ============================================================
 
-@st.cache_resource
-def init_connection():
-    url = st.secrets["supabase"]["url"]
-    key = st.secrets["supabase"]["key"]
-
-    return create_client(url, key)
-
-supabase = init_connection()
-
+styles()
 if "user" not in st.session_state:
     st.session_state.user = None
 
-if st.session_state.user is None:
-    st.title("🏌️ Golf Stats")
-
-    email = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Log in"):
-        response = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-
-        if response.user:
-            st.session_state.user = response.user
-            st.rerun()
-        else:
-            st.error("Login failed.")
-
+page = header()
+if page == "Home":
+    home()
+    footer()
+    st.stop()
+if page == "Account":
+    account()
+    footer()
+    st.stop()
+if page == "Enter Round" and st.session_state.user is None:
+    st.title("Keep a record of your round")
+    st.write("Create an account or sign in to save rounds to your personal history.")
+    st.button("Sign in / Create account", type="primary", on_click=navigate, args=("Account",))
+    footer()
     st.stop()
 
+supabase = None
+if st.session_state.user is not None:
+    try:
+        supabase = client()
+    except Exception:
+        st.error("Your account connection is unavailable. Please try again shortly.")
+        st.stop()
+
 def load_data():
+    if st.session_state.user is None:
+        return []
     response = (
         supabase.table("rounds")
         .select("*")
@@ -78,7 +75,14 @@ def load_data():
     return rounds
 
 
-rounds = load_data()
+try:
+    rounds = load_data()
+except Exception:
+    st.error("Your rounds could not be loaded. Please try again shortly.")
+    st.stop()
+
+if st.session_state.user is None:
+    st.caption("You are browsing as a visitor. Sign in through Account to view your own statistics.")
 
 
 # ============================================================
@@ -209,37 +213,19 @@ def round_statistics(round_data):
 # SIDEBAR
 # ============================================================
 
-st.sidebar.title("⛳ Golf Stats")
-
-page = st.sidebar.radio(
-    "Navigation",
-    [
-        "Dashboard",
-        "Enter Round",
-        "Round History",
-        "Statistics",
-        "Course Analysis",
-        "Hole Analysis",
-        "Graphs",
-        "Personal Records",
-        "Search Rounds"
-    ]
-)
-
-
 # ============================================================
 # DASHBOARD
 # ============================================================
 
 if page == "Dashboard":
 
-    st.title("⛳ Golf Stats Dashboard")
+    st.title("Golf Stats Dashboard")
 
     if not rounds:
 
         st.info(
-            "You don't have any rounds yet. "
-            "Go to 'Enter Round' to add your first round."
+            "No rounds to display. Sign in through Account to view your history, "
+            "or choose Enter Round to record your first round."
         )
 
     else:
@@ -344,7 +330,7 @@ if page == "Dashboard":
 
 elif page == "Enter Round":
 
-    st.title("🏌️ Enter New Round")
+    st.title("Enter New Round")
 
     course = st.text_input("Course")
 
@@ -366,95 +352,96 @@ elif page == "Enter Round":
     hole_data = []
 
     for hole in range(18):
+        with st.expander(f"Hole {hole + 1:02d}", expanded=hole == 0):
 
-        st.markdown(
-            f"### Hole {hole + 1}"
-        )
-
-        col1, col2, col3, col4 = st.columns(4)
-
-        par = col1.number_input(
-            "Par",
-            min_value=3,
-            max_value=5,
-            value=4,
-            key=f"par_{hole}"
-        )
-
-        score = col2.number_input(
-            "Score",
-            min_value=1,
-            max_value=15,
-            value=4,
-            key=f"score_{hole}"
-        )
-
-        putts = col3.number_input(
-            "Putts",
-            min_value=0,
-            max_value=6,
-            value=2,
-            key=f"putts_{hole}"
-        )
-
-        penalties = col4.number_input(
-            "Penalties",
-            min_value=0,
-            max_value=5,
-            value=0,
-            key=f"penalties_{hole}"
-        )
-
-        gir = st.checkbox(
-            "GIR",
-            key=f"gir_{hole}"
-        )
-
-        if par == 4 or par == 5:
-
-            fairway_opportunity = st.checkbox(
-                "Fairway opportunity",
-                key=f"fwopp_{hole}"
+            st.markdown(
+                f"### Hole {hole + 1}"
             )
 
-            fairway_hit = st.checkbox(
-                "Fairway hit",
-                key=f"fwhit_{hole}"
+            col1, col2, col3, col4 = st.columns(4)
+
+            par = col1.number_input(
+                "Par",
+                min_value=3,
+                max_value=5,
+                value=4,
+                key=f"par_{hole}"
             )
 
-        else:
+            score = col2.number_input(
+                "Score",
+                min_value=1,
+                max_value=15,
+                value=4,
+                key=f"score_{hole}"
+            )
 
-            fairway_opportunity = False
-            fairway_hit = False
+            putts = col3.number_input(
+                "Putts",
+                min_value=0,
+                max_value=6,
+                value=2,
+                key=f"putts_{hole}"
+            )
 
-        up_down_opportunity = st.checkbox(
-            "Up-and-down opportunity",
-            key=f"udopp_{hole}"
-        )
+            penalties = col4.number_input(
+                "Penalties",
+                min_value=0,
+                max_value=5,
+                value=0,
+                key=f"penalties_{hole}"
+            )
 
-        up_down_made = st.checkbox(
-            "Up-and-down made",
-            key=f"udmade_{hole}"
-        )
+            gir = st.checkbox(
+                "GIR",
+                key=f"gir_{hole}"
+            )
 
-        hole_data.append({
-            "par": par,
-            "score": score,
-            "putts": putts,
-            "penalties": penalties,
-            "gir": gir,
-            "fairway_opportunity":
-                fairway_opportunity,
-            "fairway_hit":
-                fairway_hit,
-            "up_down_opportunity":
-                up_down_opportunity,
-            "up_down_made":
-                up_down_made
-        })
+            if par == 4 or par == 5:
+
+                fairway_opportunity = st.checkbox(
+                    "Fairway opportunity",
+                    key=f"fwopp_{hole}"
+                )
+
+                fairway_hit = st.checkbox(
+                    "Fairway hit",
+                    key=f"fwhit_{hole}"
+                )
+
+            else:
+
+                fairway_opportunity = False
+                fairway_hit = False
+
+            up_down_opportunity = st.checkbox(
+                "Up-and-down opportunity",
+                key=f"udopp_{hole}"
+            )
+
+            up_down_made = st.checkbox(
+                "Up-and-down made",
+                key=f"udmade_{hole}"
+            )
+
+            hole_data.append({
+                "par": par,
+                "score": score,
+                "putts": putts,
+                "penalties": penalties,
+                "gir": gir,
+                "fairway_opportunity":
+                    fairway_opportunity,
+                "fairway_hit":
+                    fairway_hit,
+                "up_down_opportunity":
+                    up_down_opportunity,
+                "up_down_made":
+                    up_down_made
+            })
 
     if st.button(
-        "💾 Save Round",
+        "Save Round",
         type="primary"
     ):
 
@@ -552,7 +539,7 @@ elif page == "Enter Round":
 
 elif page == "Round History":
 
-    st.title("📋 Round History")
+    st.title("Round History")
 
     if not rounds:
 
@@ -603,7 +590,7 @@ elif page == "Round History":
 
             round_id = rounds[round_number - 1]["id"]
 
-            supabase.table("rounds").delete().eq("id", round_id).execute()
+            supabase.table("rounds").delete().eq("id", round_id).eq("user_id", str(st.session_state.user.id)).execute()
 
             st.success(
                 "Round deleted."
@@ -618,7 +605,7 @@ elif page == "Round History":
 
 elif page == "Statistics":
 
-    st.title("📊 Statistics")
+    st.title("Statistics")
 
     if not rounds:
 
@@ -710,7 +697,7 @@ elif page == "Statistics":
 
 elif page == "Course Analysis":
 
-    st.title("⛳ Course Analysis")
+    st.title("Course Analysis")
 
     if not rounds:
 
@@ -771,7 +758,7 @@ elif page == "Course Analysis":
 
 elif page == "Hole Analysis":
 
-    st.title("🕳️ Hole Analysis")
+    st.title("Hole Analysis")
 
     if not rounds:
 
@@ -903,7 +890,7 @@ elif page == "Hole Analysis":
 
 elif page == "Graphs":
 
-    st.title("📈 Graphs")
+    st.title("Graphs")
 
     if not rounds:
 
@@ -1053,7 +1040,7 @@ elif page == "Graphs":
 
 elif page == "Personal Records":
 
-    st.title("🏆 Personal Records")
+    st.title("Personal Records")
 
     if not rounds:
 
@@ -1114,7 +1101,7 @@ elif page == "Personal Records":
 
 elif page == "Search Rounds":
 
-    st.title("🔎 Search Rounds")
+    st.title("Search Rounds")
 
     search = st.text_input(
         "Search by course, date, or score"
@@ -1165,3 +1152,5 @@ elif page == "Search Rounds":
             st.warning(
                 "No matching rounds found."
             )
+
+footer()
