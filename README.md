@@ -1,105 +1,121 @@
-# Golf Stats
+# Golf Stats — web
 
-A Streamlit application for 9- and 18-hole golf rounds, saved course scorecards,
-round editing, and personal statistics. The public home page needs no account.
+Next.js / React application for golf rounds, saved course scorecards and statistics.
+The new application runs on Node.js; it does not use Streamlit or Python at runtime.
+It uses the existing Supabase project, accounts, `rounds` table and private course
+metadata, so records do not need to be copied to another database.
 
-## Run locally
+## Development
 
-Use Python 3.11 or later (validated on Python 3.12):
+Use Node.js 22 or 24:
 
 ```sh
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m streamlit run golf_stats_v9.py
+npm ci
+cp .env.example .env.local
+# Fill SUPABASE_URL and SUPABASE_KEY securely in .env.local.
+npm run dev
 ```
 
-For account features, configure `.streamlit/secrets.toml` (excluded from Git):
+The public home page renders without Supabase configuration. Account features need:
 
-```toml
-[supabase]
-url = "https://YOUR_PROJECT.supabase.co"
-key = "YOUR_PUBLISHABLE_OR_ANON_KEY"
+| Variable | Value |
+| --- | --- |
+| `SUPABASE_URL` | `https://imuoleorggmphkczfkey.supabase.co` |
+| `SUPABASE_KEY` | The existing project's publishable/anon key; never `service_role`. |
+
+These variables are server-only. Supabase sessions are verified on the server and
+stored in HttpOnly, SameSite=Lax cookies (Secure in production). The browser never
+receives the server configuration. All database reads and mutations use the
+signed-in user's ID and the user's Supabase session, without bypassing RLS.
+
+```sh
+npm run typecheck
+npm test
+npm run build
+npm start
 ```
 
-On Streamlit Community Cloud, put the same TOML in the application's Secrets.
-Never use a service-role key. Auth clients are isolated per Streamlit session.
+## Deploy on Vercel
 
-## Saved courses
+The repository root contains `package.json`, `package-lock.json` and `vercel.json`.
+No Python runtime or separate backend service is required for the new app.
 
-In **My rounds → Saved courses**, add a course, tee and 9 or 18 hole pars. You can
-also save a round first: its layout is saved automatically. Select the saved
-layout in **Record round** and only enter your round statistics. Scores and putts
-start empty; a previous round's statistics are never copied into a new round.
+1. In Vercel, choose **Add New → Project**, import `hcorreasl19/golf-stats`, branch
+   `main`, and keep the root directory as `./` and framework as **Next.js**.
+2. Before deploying, add the two server environment variables from the table above.
+   Enter the key securely in Vercel's settings, not in a commit or chat. These
+   values are not automatically copied from Codex or the old Streamlit deployment.
+3. Click **Deploy**. The build uses `npm ci` and `npm run build`.
+4. In Supabase → Authentication → URL Configuration, set **Site URL** to the new
+   production HTTPS URL and add `https://YOUR-PROJECT.vercel.app/auth/callback`
+   (or `https://YOUR-PROJECT.vercel.app/**`) to **Redirect URLs**. Use your actual
+   project domain; configure additional preview domains only if needed.
+5. Verify signup, confirmation email, login and recovery with your own test account.
+   The same existing email/password and records should work on the new site.
 
-Layouts are stored privately in the authenticated user's Supabase Auth metadata
-under `golf_course_layouts_v1`, independently of rounds. This requires no new
-Supabase table or schema migration. Layouts remain after deleting round history.
-Existing rounds also supply layouts as a compatibility fallback; use **Save
-layout to my account** to retain a historical layout independently. If saving a
-round succeeds but saving its layout fails, the app reports the partial outcome
-and offers a library retry without inserting another round.
+The `streamlit.app` address cannot serve a Next.js application. The new app needs
+its Vercel URL or a custom domain. Connect a custom domain through Vercel when
+ready. Importing the project creates the deployment; pushing code alone does not
+connect a previously unconfigured Vercel account.
 
-Course and tee identity use the existing `course` text field, formatted as
-`Course name · Tee: Tee name`; legacy names remain unchanged. Round length is
-inferred from the stored scorecard arrays. Saving a layout changes future entry
-only; historical rounds keep their original pars. The latest played historical
-layout is used when there is no independently saved layout.
+## Existing data and features
 
-## Accounts and deployment settings
+- Public home page, separate login/signup, confirmation-email resend and recovery.
+- Native 9/18-hole scorecards with no invented scores or putts, validation before
+  saving, editing, and explicit confirmation before deletion.
+- Saved course/tee layouts use the same `golf_course_layouts_v1` Supabase Auth user
+  metadata as the earlier version. Layouts are independent of round deletion;
+  historical rounds supply compatibility fallback layouts. Metadata is never used
+  for authorization.
+- The existing course text format `Name · Tee: White` and original numeric arrays
+  are preserved. Dates save as ISO; legacy `DD/MM/YYYY` remains readable.
+- Distinct scoring categories, opportunity-weighted percentages, real played-date
+  trends, separate 9/18-hole comparisons, and course/tee/scorecard-specific holes.
+- Zero opportunities mean **Sem dados**, not a misleading 0%.
+- Handicap is supplied manually, including plus handicaps as negative numbers.
+  No official WHS or rating-adjusted index is calculated.
+- Server errors retain the entry form. After an ambiguous insert response, check
+  History before retrying. A course-sync failure after a saved round is reported
+  separately so users do not insert the round again.
 
-Signup, login, logout, confirmation-email resend and password recovery use
-Supabase Auth. If email confirmation is enabled, users must confirm before login.
-Configure Supabase Auth **Site URL** to the deployed app URL and its redirect
-allowlist accordingly. The app supports one-time `token_hash` callbacks and PKCE
-callbacks when their verifier is available. Default implicit recovery links are consumed by the local `auth_callback`
-component, which removes the credentials from the browser address. For hosts
-that prevent parent-frame access, Account help also accepts the complete recovery destination URL or an
-emailed recovery code in a masked field, verifies the session, and updates the
-password. Never share those links/codes; recovery tests mock the auth service and
-do not send real emails.
+Keep RLS enabled on `rounds`. Authenticated users need SELECT, INSERT, UPDATE and
+DELETE policies restricted to `auth.uid() = user_id`; UPDATE also needs an owner
+WITH CHECK condition. The migration does not change the table, its policies, or
+existing records. Incomplete legacy rows are reported and left untouched.
 
-The existing `rounds` table must support 9- or 18-element numeric arrays in
-`pars`, `scores`, `putts`, `girs`, `penalties`, and the original aggregate counters.
-Dates now save in ISO format; existing `DD/MM/YYYY` dates remain readable.
-
-Enable row-level security on `rounds`. Authenticated users need SELECT, INSERT,
-UPDATE and DELETE policies restricted to `auth.uid() = user_id`. UPDATE needs
-both USING and WITH CHECK owner conditions. The app also filters all reads,
-updates and deletes by user ID; filters do not replace RLS. No database policies
-or schema are changed automatically by this application.
-
-## Statistics and validation
-
-- Scores include penalty strokes. Putts and penalties cannot exceed total score.
-- Birdies, eagles, albatrosses, double bogeys and triples-or-worse are distinct.
-- GIR uses the actual 9/18-hole length. A manual GIR flag is retained because
-  score minus putts alone cannot establish when the green was first reached.
-- Fairway opportunities are limited to par-4/5 holes; conversions cannot exceed
-  opportunities. Up-and-down opportunities are limited to holes without GIR.
-- Zero opportunities show **No data**, never a misleading 0% success rate.
-- Aggregate percentages and par-specific averages weight the actual opportunities
-  or holes. Comparisons separate 9 and 18 holes, and hole analysis separates
-  courses, tees and exact par layouts.
-- Trends use date played, not insertion order. Invalid legacy dates are omitted
-  from time charts with a warning and can be corrected through editing.
-- Handicap is entered manually (negative values represent plus handicaps).
-  No official WHS index or rating-adjusted comparison is calculated.
-- Round deletion requires explicit confirmation. Failed saves retain the form;
-  after an ambiguous network failure, check History before retrying an insert.
+Supabase Auth email links use `/auth/callback` with PKCE or token-hash verification.
+Default implicit recovery links are also accepted: their URL fragments are removed
+in the browser, then exchanged server-side into HttpOnly cookies. Email delivery,
+rate limits, password policies and redirect allowlists remain Supabase settings.
 
 ## Tests
 
+`npm test` executes the pure TypeScript golf-rule tests.
+
+For a local browser integration test, use the provided mock Supabase server and a
+Next development server. No real accounts, emails or database writes are used:
+
 ```sh
-python -m unittest discover -s tests -v
+# Terminal 1: local HTTP double
+python web-tests/mock_supabase.py
+
+# Terminal 2: use test-only bindings for this process, not a real project
+SUPABASE_URL=http://127.0.0.1:8900 SUPABASE_KEY=test-only npm run dev -- --hostname 127.0.0.1 --port 3000
+
+# Terminal 3: requires Playwright Python and Chromium installed in the test machine
+python web-tests/browser_check.py
+python web-tests/auth_check.py
 ```
 
-Tests cover calculations, invalid inputs, weighted statistics, date ordering,
-9/18 holes, user isolation, pagination, course-library persistence, saved-par
-reuse, editing, confirmed deletion, failed writes, and account flows. Supabase
-calls are mocked; no live user accounts or rounds are created or deleted.
+The browser test covers public pages, responsive widths, HttpOnly login, owner
+isolation, course persistence, prefilled pars with blank scores, validation,
+save/edit/delete, reports, password recovery and logout. Never point this test at
+a live Supabase project.
 
-`golf_stats_v9.py` is the deployment entry point. Domain rules, persistence and
-round UI live in `golf_domain.py`, `golf_repository.py` and `golf_views.py`.
-`interface.py` contains public pages and account flows. `style.css` and
-`.streamlit/config.toml` provide the responsive theme and rounded controls.
+## Streamlit transition
+
+The previous Python entry point is retained temporarily so the existing Streamlit
+URL is not broken before Vercel is connected. Its rejected green illustration and
+promotional cards have also been removed. These files are not used by `npm run
+build` or the new application. The previous Python tests remain available with
+`python -m unittest discover -s tests -v`.

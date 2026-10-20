@@ -73,3 +73,7 @@ footer strong { color: var(--ink); }
 [data-testid="stMetric"] { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem; }
 .feature-grid article { border: 1px solid var(--line); border-radius: 16px; padding: 1.5rem; }
 [data-testid="stRadioOption"] { border-radius: 6px; }
+
+.simple-home { padding: 3.5rem 0 2rem; max-width: 1000px; }
+.simple-home h1 { font-size: clamp(3rem, 7vw, 7rem) !important; }
+.simple-home > p:last-child { max-width: 500px; line-height: 1.8; margin-top: 2rem; color: #526357; }

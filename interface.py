@@ -42,29 +42,16 @@ def header():
 
 
 def home():
-    st.markdown('''<section class="hero">
-      <div class="hero-copy"><p class="eyebrow">A CLOSER LOOK AT YOUR GAME</p>
-      <h1>Every round.<br>A clearer perspective.</h1>
-      <p class="hero-description">Keep a record of your rounds. Understand where you gain strokes,
-      where you lose them, and how your game changes over time.</p>
-      <a class="editorial-link" href="#explore">Explore Golf Stats <span>↘</span></a></div>
-      <div class="course-art" aria-hidden="true"><div class="contour contour-one"></div>
-      <div class="contour contour-two"></div><div class="contour contour-three"></div>
-      <div class="green"></div><div class="flag"><i></i></div><span class="art-caption">A GAME OF DETAILS.</span>
-      <span class="hole-mark">18<span>HOLES. ONE COMPLETE PICTURE.</span></span></div>
-    </section>''', unsafe_allow_html=True)
+    st.markdown("""<section class="simple-home"><p class="eyebrow">REGISTRO DE GOLFE</p>
+    <h1>Seu golfe,<br>partida a partida.</h1>
+    <p>Registre seus scorecards, reutilize os pares dos campos salvos e consulte suas estatísticas.</p>
+    </section>""", unsafe_allow_html=True)
     a, b, _ = st.columns([1.3, 1.3, 3])
     with a:
         st.button("View statistics", on_click=navigate, args=("Statistics",), type="primary", width='stretch')
     with b:
-        st.button("Create an account", on_click=navigate, args=("Account",), width='stretch')
-    st.markdown('''<section id="explore" class="intro"><p class="eyebrow">YOUR ROUND, BEYOND THE SCORECARD</p>
-      <h2>A record worth<br>coming back to.</h2><p>From the first tee to the last putt,
-      bring the details of your game together in one place.</p></section>
-      <div class="feature-grid"><article><span>01 / RECORD</span><h3>Capture the round.</h3>
-      <p>Scores, putts, greens in regulation and fairways. A hole-by-hole record of what happened on the course.</p></article>
-      <article><span>02 / UNDERSTAND</span><h3>Find the patterns.</h3><p>Compare courses, review individual holes and follow the numbers that matter to your game.</p></article>
-      <article><span>03 / REVIEW</span><h3>See your progress.</h3><p>Keep your history close. Revisit personal bests and track your performance across rounds.</p></article></div>''', unsafe_allow_html=True)
+        st.button("My rounds" if st.session_state.user else "Create an account", on_click=navigate,
+                  args=("My rounds" if st.session_state.user else "Account",), width='stretch')
 
 
 def navigate(page):
